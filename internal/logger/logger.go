@@ -3,6 +3,8 @@ package logger
 import (
 	"log"
 	"os"
+
+	"github.com/p-bzh/go-webapp/internal/config"
 )
 
 const (
@@ -23,43 +25,45 @@ const (
 	TraceLevel
 )
 
-type Logger interface {
+type Interface interface {
 	Info(string)
 	Warn(string)
 	Error(string)
 	Trace(string)
 }
 
-type logger struct {
+type Logger struct {
 	minLogLevel logLevel
 	log         map[logLevel]*log.Logger
 }
 
-func (l *logger) write(level logLevel, msg string) {
+func (l *Logger) write(level logLevel, msg string) {
 	if l.minLogLevel <= level {
 		l.log[level].Println(msg)
 	}
 }
 
-func (l *logger) Info(msg string) {
+func (l *Logger) Info(msg string) {
 	l.write(InfoLevel, msg)
 }
 
-func (l *logger) Warn(msg string) {
+func (l *Logger) Warn(msg string) {
 	l.write(WarnLevel, msg)
 }
 
-func (l *logger) Error(msg string) {
+func (l *Logger) Error(msg string) {
 	l.write(ErrorLevel, msg)
 }
 
-func (l *logger) Trace(msg string) {
+func (l *Logger) Trace(msg string) {
 	l.write(TraceLevel, msg)
 }
 
-func NewLogger(level logLevel) Logger {
+func NewLogger(config config.Interface) Interface {
+	loggingConfig := config.GetStringData("logging")
+	level := translateLoggingConfig(loggingConfig)
 	flags := log.Lmsgprefix | log.Ldate | log.Ltime | log.Lshortfile
-	return &logger{
+	return &Logger{
 		minLogLevel: level,
 		log: map[logLevel]*log.Logger{
 			InfoLevel:  log.New(os.Stdout, green+"[INFO] "+reset, flags),
@@ -68,4 +72,20 @@ func NewLogger(level logLevel) Logger {
 			TraceLevel: log.New(os.Stdout, white+"[INFO] "+reset, flags),
 		},
 	}
+}
+
+func translateLoggingConfig(loggingConfig string) (level logLevel) {
+	switch loggingConfig {
+	case "info":
+		level = InfoLevel
+	case "warn":
+		level = WarnLevel
+	case "error":
+		level = ErrorLevel
+	case "trace":
+		level = TraceLevel
+	default:
+		level = InfoLevel
+	}
+	return
 }
